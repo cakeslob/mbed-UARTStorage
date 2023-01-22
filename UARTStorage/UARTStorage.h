@@ -17,7 +17,7 @@
 #define UARTSTORAGE_H
 
 #include "mbed.h"
-#include "SPIFBlockDevice.h"
+#include "I2CEEBlockDevice.h"
 //TODO find MD5 library
 
 #define SERIAL_DATA_CHUNKSIZE 64
@@ -28,11 +28,12 @@ class UARTStorage
         UARTStorage();
 
         //Use default SPI pins but at 1MHz by default to be tolerant of wires to SPI chip
-        int init_SPIFlash(PinName mosi = MBED_CONF_SPIF_DRIVER_SPI_MOSI,
-                    PinName miso = MBED_CONF_SPIF_DRIVER_SPI_MISO,
-                    PinName sclk = MBED_CONF_SPIF_DRIVER_SPI_CLK,
-                    PinName csel = MBED_CONF_SPIF_DRIVER_SPI_CS,
-                    int freq = 1000000);
+        int init_I2CEeprom(PinName sda = ARDUINO_UNO_D14,
+                    PinName scl = ARDUINO_UNO_D15,
+                    uint8_t address = 0xa0, 
+                    bd_size_t size = 262144,
+                    bd_size_t block=32, 
+                    int bus_speed=400000);
 
         mbed::bd_size_t get_ReadSize();
         mbed::bd_size_t get_EraseSize();
@@ -54,15 +55,15 @@ class UARTStorage
         //Get a given chunk of the read buffer. For example, after reading a whole block and writing it to serial 128 hex bytes at a time
         //int get_ReadBufferChunk(uint32_t buffer_index, uint32_t count);
 
-        int write_SPIF_Byte(uint8_t databyte, uint32_t flash_byte_addr);
-        int read_SPIF_Byte(uint8_t* dest_byte, uint32_t flash_byte_addr);
+        int write_I2CEE_Byte(uint8_t databyte, uint32_t flash_byte_addr);
+        int read_I2CEE_Byte(uint8_t* dest_byte, uint32_t flash_byte_addr);
         
         //read the specified block on the device to serial, in chunks of the given size
         //The address is in bytes but most fall on a block boundary
-        int read_SPIF_Block(uint32_t flash_boundary_addr, uint8_t chunksize);
-        int write_SPIF_Block(uint32_t flash_boundary_addr);
-        int erase_SPIF_Block(uint32_t flash_boundary_addr);
-        char* checksum_SPIF_Block(uint32_t flash_boundary_addr);
+        int read_I2CEE_Block(uint32_t flash_boundary_addr, uint8_t chunksize);
+        int write_I2CEE_Block(uint32_t flash_boundary_addr);
+        int erase_I2CEE_Block(uint32_t flash_boundary_addr);
+        char* checksum_I2CEE_Block(uint32_t flash_boundary_addr);
 
         // todo read byte range
         // todo write byte range
@@ -77,16 +78,16 @@ class UARTStorage
         void lineBufferHandler(char* lineBuffer, FILE* output_pc);
 
 
-        //writes stats on the SPIF device to serial
-        int write_SPIF_Stats(FILE* fd);
+        //writes stats on the I2CEE device to serial
+        int write_I2CEE_Stats(FILE* fd);
 
         //simple test program, writes results to serial
-        void spif_test_program(FILE* pc);
+        void i2cee_test_program(FILE* pc);
 
         ~UARTStorage();
 
     private:
-        SPIFBlockDevice* spif;
+        I2CEEBlockDevice* i2cee;
         //TODO: EEPROM https://os.mbed.com/docs/mbed-os/v6.7/feature-i2c-doxy/class_i2_c_e_e_block_device.html
 
         //todo record SPIF stats for a session

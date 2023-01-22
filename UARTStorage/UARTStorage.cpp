@@ -48,21 +48,21 @@ I2C: find a library
      
  }
 
- int UARTStorage::init_SPIFlash(PinName mosi,PinName miso,PinName sclk,PinName csel,int freq)
+ int UARTStorage::init_I2CEeprom(PinName sda,PinName scl, uint8_t address, bd_size_t size, bd_size_t block, int bus_speed)
  {
      //if re-init, clean up old object
-     if(spif != 0)
+     if(i2cee != 0)
      {
-         delete spif;
+         delete i2cee;
      }
 
-    spif = new SPIFBlockDevice(mosi, miso, sclk, csel, freq);
-    int status = spif->init();
+    i2cee = new I2CEEBlockDevice(sda, scl, address, size, bus_speed);
+    int status = i2cee->init();
     
     //if we were able to init the flash device, malloc buffers of the correct size
-    if(status == SPIF_BD_ERROR_OK)
+    if(status == BD_ERROR_OK)
     {
-        buffer_size = spif->get_erase_size();
+        buffer_size = i2cee->get_erase_size();
         out_buffer = (char *)malloc(buffer_size);
         in_buffer = (char *)malloc(buffer_size);
     }
@@ -73,7 +73,7 @@ I2C: find a library
 
  mbed::bd_size_t UARTStorage::get_EraseSize()
  {
-    return spif->get_erase_size();
+    return i2cee->get_erase_size();
  }
 
 char* UARTStorage::get_WriteBuffer()
@@ -97,9 +97,9 @@ int UARTStorage::program_WriteBuffer(uint32_t flash_addr, uint32_t count)
 
     //todo figure out which block to erase - size parameter to erase has to be a multiple of erase block size
     //todo check erase status
-    spif->erase(flash_addr, spif->get_erase_size());
+    i2cee->erase(flash_addr, i2cee->get_erase_size());
 
-    status = spif->program(out_buffer, flash_addr, count);
+    status = i2cee->program(out_buffer, flash_addr, count);
 
     return status;
 }
@@ -110,18 +110,18 @@ int UARTStorage::readto_ReadBuffer(uint32_t flash_addr, uint32_t count)
 {
     int status;
 
-    status = spif->read(in_buffer, flash_addr, count);
+    status = i2cee->read(in_buffer, flash_addr, count);
 
     return status;
 }
 
 
 
-int UARTStorage::read_SPIF_Byte(uint8_t* dest_byte, uint32_t flash_byte_addr)
+int UARTStorage::read_I2CEE_Byte(uint8_t* dest_byte, uint32_t flash_byte_addr)
 {
     int status = -1;
 
-    status = spif->read(dest_byte, flash_byte_addr, 1);
+    status = i2cee->read(dest_byte, flash_byte_addr, 1);
 
     return status;
 }
@@ -134,16 +134,16 @@ int UARTStorage::read_SPIF_Byte(uint8_t* dest_byte, uint32_t flash_byte_addr)
 //Function to write a specific byte to a specific byte address in the flash (not block address)
 int UARTStorage::write_SPIF_Byte(uint8_t databyte, uint32_t flash_byte_addr)
 {
-    uint8_t current_byte = spif->read(current_byte, , spif->get_erase_size());
+    uint8_t current_byte = i2cee->read(current_byte, , i2cee->get_erase_size());
 
-    int status = spif->program(&databyte, flash_addr, spif->get_erase_size());
+    int status = i2cee->program(&databyte, flash_addr, i2cee->get_erase_size());
 
     return status;
 } */
 
 
 //Read whole block to serial
-int UARTStorage::read_SPIF_Block(uint32_t flash_boundary_addr, uint8_t chunksize)
+int UARTStorage::read_I2CEE_Block(uint32_t flash_boundary_addr, uint8_t chunksize)
 {
     //check we are actually on an erase boundary
 
@@ -158,8 +158,8 @@ int UARTStorage::read_SPIF_Block(uint32_t flash_boundary_addr, uint8_t chunksize
 //int UARTStorage::erase_SPIF_Block(uint32_t blkaddr, SPIFBlockDevice& spifd){}
 
 
-// Writes SPIF stats to specified FILE (eg, buffered serial)
-int UARTStorage::write_SPIF_Stats(FILE* fd)
+// Writes I2CEE stats to specified FILE (eg, buffered serial)
+int UARTStorage::write_I2CEE_Stats(FILE* fd)
 {
     int status = -1;
 
@@ -167,29 +167,29 @@ int UARTStorage::write_SPIF_Stats(FILE* fd)
     {
         //fprintf(fd, "spif init status: %d\n", status);
         //NOTE: Some of these get_*_size functions (program / read) are hardcoded to assume 1 byte in SPIFBlockDevice.cpp
-        fprintf(fd, "spif size: %llu bytes \n",   spif->size());
-        fprintf(fd, "spif read size: %llu\n",    spif->get_read_size());
-        fprintf(fd, "spif program size: %llu\n", spif->get_program_size());
-        fprintf(fd, "spif erase size: %llu\n",   spif->get_erase_size());
-        fprintf(fd, "spif total device size: %llu\n", spif->size());
+        fprintf(fd, "i2cee size: %llu bytes \n",   i2cee->size());
+        fprintf(fd, "i2cee read size: %llu\n",    i2cee->get_read_size());
+        fprintf(fd, "i2cee program size: %llu\n", i2cee->get_program_size());
+        fprintf(fd, "i2cee erase size: %llu\n",   i2cee->get_erase_size());
+        fprintf(fd, "i2cee total device size: %llu\n", i2cee->size());
     }
     else{
-        fprintf(fd, "E: spif not initialized!");
+        fprintf(fd, "E: i2cee not initialized!");
     }
 
     return 0;
 }
 
 // Run test program and write output to specific FILE (eg, buffered serial)
-void UARTStorage::spif_test_program(FILE* pc)
+void UARTStorage::i2cee_test_program(FILE* pc)
 {
     int status;
 
-    fprintf(pc, "\n\nspif test\n");
+    fprintf(pc, "\n\ni2cee test\n");
 
     // Initialize the SPI flash device, and print the memory layout
-    //status = spif->init();
-    write_SPIF_Stats(pc);
+    //status = i2cee->init();
+    write_I2CEE_Stats(pc);
 
     //uint16_t erase_size = spif->get_erase_size();
     
@@ -197,19 +197,19 @@ void UARTStorage::spif_test_program(FILE* pc)
     // Write "Hello World!" to the first block
 
     //sprintf(out_buffer, "Some new buffer text!\nand another line\n");
-    //spif->erase(0, spif->get_erase_size());
-    //spif->program(out_buffer, 0, spif->get_erase_size());
+    //i2cee->erase(0, i2cee->get_erase_size());
+    //i2cee->program(out_buffer, 0, i2cee->get_erase_size());
 
     fprintf(pc, "\nReading flash chip block 0: \n");
 
     // Read back what was stored
     
-    status = spif->read(in_buffer, 0, spif->get_erase_size());
-    fprintf(pc, "spif read status: %d\n", status);
+    status = i2cee->read(in_buffer, 0, i2cee->get_erase_size());
+    fprintf(pc, "i2cee read status: %d\n", status);
     fprintf(pc, "%s", in_buffer);
 
     // Deinitialize the devicev
-    //spif->deinit();
+    //i2cee->deinit();
 }
 
 //Called by serialCLI whenever a new line is encountered, and sent all the characters from the beginning of the line up to the newline
@@ -271,12 +271,12 @@ void UARTStorage::lineBufferHandler(char* lineBuffer, FILE* output_pc)
         {
             //todo: allow for pins and freq to be specified
             //for now will use default in UARTStorage.h
-            status = this->init_SPIFlash();
+            status = this->init_I2CEeprom();
             fprintf(output_pc, "I: SPI Initialized %d\n", status);
         }
         else if(strcmp("deinitspi", command) == 0)
         {
-            status = spif->deinit();
+            status = i2cee->deinit();
             fprintf(output_pc, "I: SPI Deinitialized %d\n", status);
         }
     }
@@ -287,7 +287,7 @@ void UARTStorage::lineBufferHandler(char* lineBuffer, FILE* output_pc)
         if(strcmp("readblk", command) == 0)
         {
             sscanf(value1, "%d", &addr);
-            read_SPIF_Block(addr, SERIAL_DATA_CHUNKSIZE);
+            read_I2CEE_Block(addr, SERIAL_DATA_CHUNKSIZE);
         }
         // Read a single byte
         else if(strcmp("readbyte", command) == 0)
@@ -298,7 +298,7 @@ void UARTStorage::lineBufferHandler(char* lineBuffer, FILE* output_pc)
             if(scanned == 1)
             {
                 fprintf(output_pc, "Reading single byte %d\n", start_byte);
-                read_SPIF_Byte(&result, start_byte);
+                read_I2CEE_Byte(&result, start_byte);
                 //Write out as hex
                 fprintf(output_pc, "D: %x\n", result);
             }
@@ -334,7 +334,7 @@ void UARTStorage::lineBufferHandler(char* lineBuffer, FILE* output_pc)
         {
             
         }
-    else if(scan_count == 4)
+        else if(scan_count == 4)
         //write a given range in the buffer to address on the flash device
         if(strcmp("writebufferrange", command) == 0)
         {
@@ -357,8 +357,8 @@ void UARTStorage::lineBufferHandler(char* lineBuffer, FILE* output_pc)
 
  UARTStorage::~UARTStorage()
  {
-     if(spif != 0)
+     if(i2cee != 0)
      {
-         spif->deinit();
+         i2cee->deinit();
      }
  }

@@ -12,7 +12,7 @@
 
 
 UARTStorage storage;
-BufferedSerial bufserial(PA_2, PA_3, 115200);
+BufferedSerial bufserial(CONSOLE_TX, CONSOLE_RX, 115200);
 
 
 int main()
@@ -26,9 +26,9 @@ int main()
     ThisThread::sleep_for(100ms);
 
     //mosi, miso, sclk, CS, freq
-    storage.init_SPIFlash(PA_7, PB_4, PA_5, PA_4, 1000000);
+    storage.init_I2CEeprom(D14, D15, 0xa0, 32*8192,400000);
 
-    storage.spif_test_program(pc);
+    storage.i2cee_test_program(pc);
     
     //https://os.mbed.com/questions/77791/Correct-construction-for-callback-on-a-m/
     //The handler that serialCLI calls when \n encountered is a member of the UARTStorage class, so the callback for it has be in "class method invocation" form
